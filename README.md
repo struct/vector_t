@@ -1,4 +1,4 @@
-# vector_t Library
+# vector_t library
 
 **vector_t** is a simple vector library in C. It's designed to hold arbitrary `void *` pointers. It doesn't know what those pointers do or who owns them. If they point to malloc'd memory you need to free that memory.
 
@@ -33,6 +33,7 @@ The API documentation is below. You can also look at *unit_tests.c* for some exa
 # Building
 
 `make library` will build `libvector.c`
+
 `make test` will build and run the unit tests
 
 I recommend submoduling this repo or just copying out *vector.c* and *vector.h*
