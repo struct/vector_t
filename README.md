@@ -4,6 +4,8 @@
 
 The API convention is built off function callbacks for working with vector contents and very simple push/pop semantics for adding and removing elements.
 
+The vector_t library is not thread safe but does contain a simple locking mechanism to prevent write modifications while using the `vector_for_each` callback. It is enabled with the `-DWRITE_LOCK` flag or by modifying the Makefile.
+
 # API
 
 The API documentation is below. You can also look at *unit_tests.c* for some examples of how to use it.
@@ -18,7 +20,7 @@ The API documentation is below. You can also look at *unit_tests.c* for some exa
 
 `void *vector_get_at(vector_t *v, size_t index);` Return the vector element at an index
 
-`void *vector_for_each(vector_t *v, vector_for_each_callback_t *fe, void *data);` Invokes a callback for each vector element. Stops if the callback returns non-NULL
+`void *vector_for_each(vector_t *v, vector_for_each_callback_t *fe, void *data);` Invokes a callback for each vector element. Stops if the callback returns non-NULL. If compiled with `-DWRITE_LOCK` or `-DDEBUG` this function will enable a lock that prevents modification during iteration
 
 `void *vector_set_at(vector_t *v, int index, void *ptr);` Sets the vector element at an index
 

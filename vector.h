@@ -7,7 +7,11 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#define VECTOR_MIN_SIZE 512
+#if DEBUG || WRITE_LOCK
+#include <assert.h>
+#endif
+
+#define VECTOR_MIN_SIZE 1024
 
 typedef struct {
 	/* This vector only holds pointers */
@@ -18,7 +22,26 @@ typedef struct {
     size_t size;
     /* Index of the last known hole in the vector */
     size_t free_slot;
+#if DEBUG || WRITE_LOCK
+    /* Write lock. Not thread safe!
+     * Only used with -DWRITE_LOCK or -DDEBUG */
+    int32_t lock;
+#endif
 } vector_t;
+
+#if DEBUG || WRITE_LOCK
+#define LOCK_VECTOR(v) v->lock = 1;
+#define UNLOCK_VECTOR(v) v->lock = 0;
+#define IS_VECTOR_LOCKED(v) (v->lock == 1)
+#define IS_VECTOR_UNLOCKED(v) (v->lock == 0)
+#define ASSERT_IF_LOCKED(v) assert(!IS_VECTOR_LOCKED(v))
+#else
+#define LOCK_VECTOR(v)
+#define UNLOCK_VECTOR(v)
+#define IS_VECTOR_LOCKED(v)
+#define IS_VECTOR_UNLOCKED(v)
+#define ASSERT_IF_LOCKED(v)
+#endif
 
 typedef void (vector_delete_callback_t)(void *);
 typedef void *(vector_for_each_callback_t)(void *, void *);

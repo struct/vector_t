@@ -12,6 +12,8 @@
 /* Push a pointer to the vector, resize if necessary.
  * Returns this new elements index in the vector */
 int vector_push(vector_t *v, void *ptr) {
+    ASSERT_IF_LOCKED(v);
+
     if(v->size == 0) {
         v->size = VECTOR_MIN_SIZE;
         v->data = (void *) malloc(sizeof(void *) * v->size);
@@ -37,6 +39,8 @@ int vector_push(vector_t *v, void *ptr) {
 
 /* Returns and clears the last member of the vector */
 void *vector_pop(vector_t *v) {
+    ASSERT_IF_LOCKED(v);
+
     if(v->end_slot == 0) {
         return NULL;
     }
@@ -67,11 +71,15 @@ void *vector_get_at(vector_t *v, size_t index) {
 /* Invokes a callback for each vector member.
  * Stops if the callback returns non-NULL */
 void *vector_for_each(vector_t *v, vector_for_each_callback_t *fe, void *data) {
+    ASSERT_IF_LOCKED(v);
+
     void *ret = NULL;
 
     if(fe == NULL) {
         return NULL;
     }
+
+    LOCK_VECTOR(v);
 
     for(size_t sz=0; sz < vector_used(v); sz++) {
         void *p = vector_get_at(v, sz);
@@ -83,15 +91,19 @@ void *vector_for_each(vector_t *v, vector_for_each_callback_t *fe, void *data) {
         ret = (fe)(p, data);
 
         if(ret != NULL) {
+            UNLOCK_VECTOR(v);
             return ret;
         }
     }
 
+    UNLOCK_VECTOR(v);
     return NULL;
 }
 
 /* Sets the vector member at an index */
 void *vector_set_at(vector_t *v, int index, void *ptr) {
+    ASSERT_IF_LOCKED(v);
+
     if(index >= v->end_slot) {
         return NULL;
     }
@@ -110,6 +122,7 @@ size_t vector_used(vector_t *v) {
 /* May create a hole in the vector. The free_slot
  * member tracks this. Its a cheap optimization */
 void vector_delete_at(vector_t *v, size_t index) {
+    ASSERT_IF_LOCKED(v);
     v->data[index] = 0x0;
     v->free_slot = index;
 }
@@ -118,6 +131,7 @@ void vector_delete_at(vector_t *v, size_t index) {
  * the vector. Its callers responsibility to free
  * them before calling this. */
 void vector_delete_all(vector_t *v, vector_delete_callback_t *dc) {
+    ASSERT_IF_LOCKED(v);
     void *p = NULL;
 
     while((p = vector_pop(v)) != NULL) {
@@ -129,6 +143,7 @@ void vector_delete_all(vector_t *v, vector_delete_callback_t *dc) {
 
 /* Free the underlying buffer */
 void vector_free(vector_t *v) {
+    ASSERT_IF_LOCKED(v);
     memset(v->data, 0x0, v->size);
     free(v->data);
     v->size = 0;
