@@ -1,10 +1,10 @@
 /* chris.rohlf@gmail.com - 2019 */
 /* vector.h - A simple pointer vector */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 
 #if DEBUG || WRITE_LOCK
@@ -14,7 +14,7 @@
 #define VECTOR_MIN_SIZE 1024
 
 typedef struct {
-	/* This vector only holds pointers */
+    /* This vector only holds pointers */
     void **data;
     /* Index to the end of the vector */
     size_t end_slot;
@@ -43,7 +43,7 @@ typedef struct {
 #define ASSERT_IF_LOCKED(v)
 #endif
 
-typedef void (vector_delete_callback_t)(void *);
+typedef void(vector_delete_callback_t)(void *);
 typedef void *(vector_for_each_callback_t)(void *, void *);
 
 void *vector_pop(vector_t *v);
@@ -56,4 +56,4 @@ void vector_delete_at(vector_t *v, size_t index);
 void vector_free(vector_t *v);
 void vector_init(vector_t *v);
 size_t vector_used(vector_t *v);
-int vector_push(vector_t *v, void *ptr);
+int32_t vector_push(vector_t *v, void *ptr);

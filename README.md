@@ -4,7 +4,7 @@
 
 The API convention is built off function callbacks for working with vector contents and very simple push/pop semantics for adding and removing elements.
 
-The vector_t library is not thread safe but does contain a simple locking mechanism to prevent write modifications while using the `vector_for_each` callback. It is enabled with the `-DWRITE_LOCK` flag or by modifying the Makefile.
+The vector_t library is not thread safe by design, but it does contain a simple non-atomic locking mechanism to prevent write modifications while using the `vector_for_each` callback. It is enabled with the `-DWRITE_LOCK` flag or by modifying the Makefile.
 
 # API
 
@@ -34,10 +34,12 @@ The API documentation is below. You can also look at *unit_tests.c* for some exa
 
 # Building
 
-`make library` will build `libvector.c`
+`make library` will build `libvector.so`
 
-`make test` will build and run the unit tests
+`make library_debug` will build a debug version of the library
 
-I recommend submoduling this repo or just copying out *vector.c* and *vector.h*
+`make test` will build and run the unit tests with Address Sanitizer
 
-chris.rohlf@gmail.com - 2019
+`make format` runs clang format
+
+chris.rohlf@gmail.com - 2021

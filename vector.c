@@ -11,7 +11,7 @@
 
 /* Push a pointer to the vector, resize if necessary.
  * Returns this new elements index in the vector */
-int vector_push(vector_t *v, void *ptr) {
+int32_t vector_push(vector_t *v, void *ptr) {
     ASSERT_IF_LOCKED(v);
 
     if(v->size == 0) {
@@ -23,8 +23,9 @@ int vector_push(vector_t *v, void *ptr) {
     /* Sometimes the vector has a free slot, lets use it */
     if(v->free_slot != 0) {
         v->data[v->free_slot] = ptr;
+        int32_t free_slot = v->free_slot;
         v->free_slot = 0;
-        return v->free_slot;
+        return free_slot;
     }
 
     if(v->end_slot == v->size) {
@@ -33,8 +34,7 @@ int vector_push(vector_t *v, void *ptr) {
     }
 
     v->data[v->end_slot] = ptr;
-    v->end_slot++;
-    return v->end_slot;
+    return v->end_slot++;
 }
 
 /* Returns and clears the last member of the vector */
@@ -45,7 +45,7 @@ void *vector_pop(vector_t *v) {
         return NULL;
     }
 
-    void *last = v->data[v->end_slot-1];
+    void *last = v->data[v->end_slot - 1];
     size_t last_index = v->end_slot - 1;
 
     v->data[last_index] = 0x0;
@@ -81,7 +81,7 @@ void *vector_for_each(vector_t *v, vector_for_each_callback_t *fe, void *data) {
 
     LOCK_VECTOR(v);
 
-    for(size_t sz=0; sz < vector_used(v); sz++) {
+    for(size_t sz = 0; sz < vector_used(v); sz++) {
         void *p = vector_get_at(v, sz);
 
         if(p == NULL) {

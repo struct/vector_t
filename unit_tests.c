@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     vector_t v;
     vector_init(&v);
 
-    for(size_t j=0; j < VECTOR_PUSHES; j++) {
+    for(size_t j = 0; j < VECTOR_PUSHES; j++) {
         vector_push(&v, VECTOR_ENTRY);
     }
 
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     vector_for_each_callback_t *fe = &vector_fe_test;
     vector_for_each(&v, fe, NULL);
 
-    for(size_t i=0; i < vector_used(&v); i++) {
+    for(size_t i = 0; i < vector_used(&v); i++) {
         printf("Vector entry [%s]\n", vector_get_at(&v, i));
     }
 
