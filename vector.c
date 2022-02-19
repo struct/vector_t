@@ -1,19 +1,11 @@
-/* chris.rohlf@gmail.com - 2019 */
+/* chris.rohlf@gmail.com - 2022 */
 /* vector.c - A simple pointer vector library */
 
 #include "vector.h"
 
-/* This vector is just a simple container for pointers. It
- * doesn't know whether your pointers are from malloc or
- * const static strings. It is useful for storing lists of
- * pointers and iterating over them quickly. Building
- * abstractions on top of it is very useful */
-
 /* Push a pointer to the vector, resize if necessary.
  * Returns this new elements index in the vector */
-int32_t vector_push(vector_t *v, void *ptr) {
-    ASSERT_IF_LOCKED(v);
-
+int32_t _vector_push(vector_t *v, void *ptr) {
     if(v->size == 0) {
         v->size = VECTOR_MIN_SIZE;
         v->data = (void *) malloc(sizeof(void *) * v->size);
@@ -34,13 +26,20 @@ int32_t vector_push(vector_t *v, void *ptr) {
     }
 
     v->data[v->end_slot] = ptr;
-    return v->end_slot++;
+    v->end_slot++;
+    int32_t ret = v->end_slot;
+    return ret;
+}
+
+int32_t vector_push(vector_t *v, void *ptr) {
+    LOCK_VECTOR(v);
+    int32_t ret = _vector_push(v, ptr);
+    UNLOCK_VECTOR(v);
+    return ret;
 }
 
 /* Returns and clears the last member of the vector */
-void *vector_pop(vector_t *v) {
-    ASSERT_IF_LOCKED(v);
-
+void *_vector_pop(vector_t *v) {
     if(v->end_slot == 0) {
         return NULL;
     }
@@ -54,56 +53,44 @@ void *vector_pop(vector_t *v) {
     return last;
 }
 
+void *vector_pop(vector_t *v) {
+    LOCK_VECTOR(v);
+    void *last = _vector_pop(v);
+    UNLOCK_VECTOR(v);
+    return last;
+}
+
 /* Returns the last member of the vector */
-void *vector_get_end(vector_t *v) {
+void *_vector_get_end(vector_t *v) {
     return v->data[v->end_slot];
 }
 
+void *vector_get_end(vector_t *v) {
+    LOCK_VECTOR(v);
+    void *ret = _vector_get_end(v);
+    UNLOCK_VECTOR(v);
+    return ret;
+}
+
 /* Return the vector member at an index */
-void *vector_get_at(vector_t *v, size_t index) {
+void *_vector_get_at(vector_t *v, size_t index) {
     if(index >= v->end_slot) {
         return NULL;
     }
 
-    return v->data[index];
+    void *ret = v->data[index];
+    return ret;
 }
 
-/* Invokes a callback for each vector member.
- * Stops if the callback returns non-NULL */
-void *vector_for_each(vector_t *v, vector_for_each_callback_t *fe, void *data) {
-    ASSERT_IF_LOCKED(v);
-
-    void *ret = NULL;
-
-    if(fe == NULL) {
-        return NULL;
-    }
-
+void *vector_get_at(vector_t *v, size_t index) {
     LOCK_VECTOR(v);
-
-    for(size_t sz = 0; sz < vector_used(v); sz++) {
-        void *p = vector_get_at(v, sz);
-
-        if(p == NULL) {
-            continue;
-        }
-
-        ret = (fe)(p, data);
-
-        if(ret != NULL) {
-            UNLOCK_VECTOR(v);
-            return ret;
-        }
-    }
-
+    void *ret = _vector_get_at(v, index);
     UNLOCK_VECTOR(v);
-    return NULL;
+    return ret;
 }
 
 /* Sets the vector member at an index */
-void *vector_set_at(vector_t *v, int index, void *ptr) {
-    ASSERT_IF_LOCKED(v);
-
+void *_vector_set_at(vector_t *v, int index, void *ptr) {
     if(index >= v->end_slot) {
         return NULL;
     }
@@ -114,6 +101,46 @@ void *vector_set_at(vector_t *v, int index, void *ptr) {
     return v->data[index];
 }
 
+void *vector_set_at(vector_t *v, int index, void *ptr) {
+    LOCK_VECTOR(v);
+    void *ret = _vector_set_at(v, index, ptr);
+    UNLOCK_VECTOR(v);
+    return ret;
+}
+
+/* Invokes a callback for each vector member.
+ * Stops if the callback returns non-NULL */
+void *vector_for_each(vector_t *v, vector_for_each_callback_t *fe, void *data) {
+    LOCK_VECTOR(v);
+
+    void *ret = NULL;
+
+    if(fe == NULL) {
+        UNLOCK_VECTOR(v);
+        return NULL;
+    }
+
+    size_t used = vector_used(v);
+
+    for(size_t idx = 0; idx < used; idx++) {
+        void *p = _vector_get_at(v, idx);
+
+        if(p == NULL) {
+            continue;
+        }
+
+        ret = (fe) (p, data);
+
+        if(ret != NULL || used > vector_used(v)) {
+            UNLOCK_VECTOR(v);
+            return ret;
+        }
+    }
+
+    UNLOCK_VECTOR(v);
+    return NULL;
+}
+
 /* Returns the number of entries in the vector */
 size_t vector_used(vector_t *v) {
     return v->end_slot;
@@ -122,36 +149,43 @@ size_t vector_used(vector_t *v) {
 /* May create a hole in the vector. The free_slot
  * member tracks this. Its a cheap optimization */
 void vector_delete_at(vector_t *v, size_t index) {
-    ASSERT_IF_LOCKED(v);
+    LOCK_VECTOR(v);
     v->data[index] = 0x0;
     v->free_slot = index;
+    UNLOCK_VECTOR(v);
 }
 
 /* Delete the vector by pop'ing each member from
  * the vector. Its callers responsibility to free
  * them before calling this. */
 void vector_delete_all(vector_t *v, vector_delete_callback_t *dc) {
-    ASSERT_IF_LOCKED(v);
+    LOCK_VECTOR(v);
     void *p = NULL;
 
-    while((p = vector_pop(v)) != NULL) {
+    while((p = _vector_pop(v)) != NULL) {
         if(dc != NULL) {
             (dc)(p);
         }
     }
+
+    UNLOCK_VECTOR(v);
 }
 
 /* Free the underlying buffer */
 void vector_free(vector_t *v) {
-    ASSERT_IF_LOCKED(v);
+    LOCK_VECTOR(v);
     memset(v->data, 0x0, v->size);
     free(v->data);
     v->size = 0;
     v->end_slot = 0;
+    UNLOCK_VECTOR(v);
 }
 
 /* Initialize the vector members */
 void vector_init(vector_t *v) {
+#if VECTOR_LOCK
+    pthread_mutex_init(&v->lock, 0);
+#endif
     v->data = NULL;
     v->size = 0;
     v->end_slot = 0;

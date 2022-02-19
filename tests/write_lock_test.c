@@ -1,4 +1,4 @@
-/* chris.rohlf@gmail.com - 2019 */
+/* chris.rohlf@gmail.com - 2022 */
 /* vector_t unit tests */
 
 #include "vector.h"
@@ -6,13 +6,12 @@
 #define VECTOR_PUSHES 10
 #define VECTOR_ENTRY "abcd1234"
 
+vector_t v;
+
 void *vector_fe_test(void *p, void *data) {
-    printf("Vector entry [%s]\n", p);
-    if(strcmp(p, VECTOR_ENTRY) != 0) {
-        printf("Unexpected vector entry [%s]\n", p);
-        exit(-1);
-    }
-    return 0;
+    fprintf(stdout, "Pushing a string\n");
+    _vector_push(&v, "hello!");
+    return NULL;
 }
 
 void vector_pointer_free(void *p) {
@@ -20,7 +19,6 @@ void vector_pointer_free(void *p) {
 }
 
 int main(int argc, char *argv[]) {
-    vector_t v;
     vector_init(&v);
 
     for(size_t j = 0; j < VECTOR_PUSHES; j++) {
@@ -43,15 +41,6 @@ int main(int argc, char *argv[]) {
 
     vector_delete_all(&v, NULL);
     vector_free(&v);
-
-    vector_delete_callback_t *dc = &vector_pointer_free;
-    vector_t vv;
-    vector_init(&vv);
-    vector_push(&vv, malloc(10));
-    vector_push(&vv, malloc(20));
-    vector_push(&vv, malloc(30));
-    vector_delete_all(&vv, dc);
-    vector_free(&vv);
 
     return 0;
 }

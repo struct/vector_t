@@ -1,14 +1,14 @@
-## chris.rohlf@gmail.com - 2019
+## chris.rohlf@gmail.com - 2022
 ## vector_t Makefile
 
 CC = clang
-CFLAGS = -Wall
+CFLAGS = -Wall -std=c17
 EXE_CFLAGS = -fPIE -pie
+LDFLAGS = -lpthread
 DEBUG_FLAGS = -DDEBUG -ggdb
-WRITE_LOCK = -DWRITE_LOCK
+VECTOR_LOCK = -DVECTOR_LOCK=1
 LIBRARY = -fPIC -shared -fvisibility=default
 ASAN = -fsanitize=address
-TEST_FLAGS = -DVECTOR_UNIT_TEST=1
 BUILD_DIR = build
 
 UNAME := $(shell uname)
@@ -22,23 +22,28 @@ all: library
 ## Build the library
 library: clean
 	mkdir -p $(BUILD_DIR)/
-	$(CC) $(CFLAGS) $(LIBRARY) vector.c -o $(BUILD_DIR)/libvector.so
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBRARY) $(VECTOR_LOCK) vector.c -o $(BUILD_DIR)/libvector.so
 	$(STRIP)
 
 ## Build a debug version of the library
 library_debug: clean
 	mkdir -p $(BUILD_DIR)/
-	$(CC) $(CFLAGS) $(LIBRARY) $(DEBUG_FLAGS) $(WRITE_LOCK) vector.c -o $(BUILD_DIR)/libvector.so
+	$(CC) $(ASAN) $(CFLAGS) $(LDFLAGS) $(LIBRARY) $(DEBUG_FLAGS) $(VECTOR_LOCK) vector.c -o $(BUILD_DIR)/libvector.so
 
 ## Build the vector tests
-test: library_debug clean
+tests: library_debug clean
 	mkdir -p ../$(BUILD_DIR)/
-	$(CC) $(ASAN) $(DEBUG_FLAGS) $(WRITE_LOCK) $(CFLAGS) -o $(BUILD_DIR)/vector_test unit_tests.c \
-		$(TEST_FLAGS) -Lbuild/ -lvector
-	$(CC) $(ASAN) $(DEBUG_FLAGS) $(WRITE_LOCK) $(CFLAGS) -o $(BUILD_DIR)/vector_write_lock_test write_lock_test.c \
-		$(TEST_FLAGS) -Lbuild/ -lvector
-	LD_LIBRARY_PATH=$(BUILD_DIR)/ $(BUILD_DIR)/vector_test
-	LD_LIBRARY_PATH=$(BUILD_DIR)/ $(BUILD_DIR)/vector_write_lock_test
+	$(CC) $(ASAN) $(DEBUG_FLAGS) $(VECTOR_LOCK) $(CFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/test tests/unit_tests.c \
+		$(TEST_FLAGS) -Lbuild/ -lvector -I./
+	$(CC) $(ASAN) $(DEBUG_FLAGS) $(VECTOR_LOCK) $(CFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/write_lock_test tests/write_lock_test.c \
+		$(TEST_FLAGS) -Lbuild/ -lvector -I./
+	LD_LIBRARY_PATH=$(BUILD_DIR)/ $(BUILD_DIR)/test
+	LD_LIBRARY_PATH=$(BUILD_DIR)/ $(BUILD_DIR)/write_lock_test
+
+perf_test: library clean
+	$(CC) $(DEBUG_FLAGS) $(VECTOR_LOCK) $(CFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/write_perf_test tests/write_perf_test.c \
+	$(TEST_FLAGS) -Lbuild/ -lvector -I./
+	LD_LIBRARY_PATH=$(BUILD_DIR)/ $(BUILD_DIR)/write_perf_test
 
 format:
 	clang-format *.c *.h -i
